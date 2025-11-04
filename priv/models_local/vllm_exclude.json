@@ -1,0 +1,12 @@
+{
+  "provider": {
+    "id": "openai"
+  },
+  "exclude": [
+    "test-only-text-embedding",
+    "test-only-chat",
+    "test-only-text-embedding",
+    "test-only-responses",
+    "test-only-max-completions"
+  ]
+}
