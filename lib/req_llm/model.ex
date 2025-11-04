@@ -35,6 +35,7 @@ defmodule ReqLLM.Model do
           temperature: boolean(),
           attachment: boolean()
         }
+  @type model_base_url :: String.t()
 
   @derive {Jason.Encoder, only: [:provider, :model, :max_tokens, :max_retries]}
   typedstruct do
@@ -51,6 +52,9 @@ defmodule ReqLLM.Model do
     field(:modalities, %{input: [modality()], output: [modality()]} | nil)
     field(:capabilities, capabilities() | nil)
     field(:cost, cost() | nil)
+
+    # overrides the provider DSL field base_url for this model
+    field(:model_base_url,  String.t() | nil)
   end
 
   @doc """
@@ -94,7 +98,8 @@ defmodule ReqLLM.Model do
       limit: limit,
       modalities: Keyword.get(opts, :modalities),
       capabilities: Keyword.get(opts, :capabilities),
-      cost: Keyword.get(opts, :cost)
+      cost: Keyword.get(opts, :cost),
+      model_base_url: Keyword.get(opts, :model_base_url)
     }
   end
 

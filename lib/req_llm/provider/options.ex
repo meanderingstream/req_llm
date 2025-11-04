@@ -153,6 +153,14 @@ defmodule ReqLLM.Provider.Options do
                                  type: :pos_integer,
                                  doc:
                                    "Timeout for receiving HTTP responses in milliseconds (defaults to global config)"
+                               ],
+
+                               # Override provider options
+                               # HTTP client options
+                               model_base_url: [
+                                 type: :string,
+                                 doc:
+                                   "Override the provider base_url with a url provided on the model options"
                                ]
                              )
 
@@ -222,24 +230,29 @@ defmodule ReqLLM.Provider.Options do
   """
   @spec process!(module(), atom(), ReqLLM.Model.t(), keyword()) :: keyword()
   def process!(provider_mod, operation, model, opts) do
+    # IO.inspect(provider_mod, label: "provider_mod")
     {internal_opts, user_opts} = Keyword.split(opts, @internal_keys)
     user_opts = handle_stream_alias(user_opts)
     user_opts = normalize_legacy_options(user_opts)
 
     # Extract model options (e.g. max_tokens) if present
     user_opts = extract_model_options(model, user_opts)
-
+    # IO.inspect(user_opts, label: "user_opts")
     # Check for key collisions before schema validation
     check_provider_key_collisions!(provider_mod, user_opts)
-
+    # IO.inspect("passed check_provider_key_collisions")
     # Auto-hoist provider-specific top-level options into :provider_options
     user_opts = auto_hoist_provider_options(provider_mod, user_opts)
+    # IO.inspect("passed auto_hoist_provider_options")
 
     # Apply pre-validation normalization (allows providers to filter/map unsupported options)
     user_opts = apply_pre_validation(provider_mod, operation, model, user_opts)
-
+    # IO.inspect(user_opts, label: "after apply_pre_validation")
+    # IO.inspect(@generation_options_schema, label: "@generation_options_schema")
     schema = compose_schema_internal(@generation_options_schema, provider_mod)
+    # IO.inspect(schema, label: "compose_schema_internal")
     validated_opts = NimbleOptions.validate!(user_opts, schema)
+    # IO.inspect("passed validate!")
 
     {provider_options, standard_opts} = Keyword.pop(validated_opts, :provider_options, [])
     flattened_for_translation = Keyword.merge(standard_opts, provider_options)
@@ -395,39 +408,6 @@ defmodule ReqLLM.Provider.Options do
     compose_schema_internal(base_schema, provider_mod)
   end
 
-  @doc """
-  Returns the effective base URL for the provider based on precedence rules.
-
-  The base URL is determined by the following precedence order (highest to lowest):
-  1. `opts[:base_url]` - Explicitly passed in options
-  2. Application config - `Application.get_env(:req_llm, model.provider)[:base_url]`
-  3. Provider registry metadata - Loaded from provider's JSON metadata file
-  4. Provider default - `provider_mod.default_base_url()`
-
-  ## Parameters
-
-  - `provider_mod` - Provider module implementing the Provider behavior
-  - `model` - ReqLLM.Model struct containing provider information
-  - `opts` - Options keyword list that may contain :base_url
-
-  ## Examples
-
-      iex> model = %ReqLLM.Model{provider: :openai, model: "gpt-4"}
-      iex> ReqLLM.Provider.Options.effective_base_url(ReqLLM.Providers.OpenAI, model, [])
-      "https://api.openai.com/v1"
-
-      iex> opts = [base_url: "https://custom.example.com"]
-      iex> ReqLLM.Provider.Options.effective_base_url(ReqLLM.Providers.OpenAI, model, opts)
-      "https://custom.example.com"
-  """
-  @spec effective_base_url(module(), ReqLLM.Model.t(), keyword()) :: String.t()
-  def effective_base_url(provider_mod, %ReqLLM.Model{} = model, opts) do
-    opts[:base_url] ||
-      base_url_from_application_config(model.provider) ||
-      base_url_from_provider_metadata(model.provider) ||
-      provider_mod.default_base_url()
-  end
-
   # Private helper functions
 
   defp normalize_legacy_options(opts) do
@@ -439,8 +419,25 @@ defmodule ReqLLM.Provider.Options do
   end
 
   defp extract_model_options(%ReqLLM.Model{} = model, opts) do
+    model_options = extract_model_max_tokens(model, opts)
+    # IO.inspect(model_options, label: "model_options max_tokens")
+    model_options = extract_model_base_url(model, model_options)
+    # IO.inspect(model_options, label: "model_options extract_model_base_url")
+    model_options
+  end
+
+  defp extract_model_max_tokens(%ReqLLM.Model{} = model, opts) do
     if model.max_tokens && model.max_tokens > 0 do
       Keyword.put_new(opts, :max_tokens, model.max_tokens)
+    else
+      opts
+    end
+  end
+
+  defp extract_model_base_url(%ReqLLM.Model{} = model, opts) do
+    model_base_url = model.model_base_url
+    if model_base_url && String.valid?(model_base_url) && String.length(model_base_url) > 0  do
+      Keyword.put_new(opts, :model_base_url, model_base_url)
     else
       opts
     end
@@ -637,14 +634,20 @@ defmodule ReqLLM.Provider.Options do
 
   defp check_provider_key_collisions!(provider_mod, _opts) do
     if function_exported?(provider_mod, :provider_schema, 0) do
+      # IO.inspect("in check_provider_key")
       provider_schema = provider_mod.provider_schema()
+      # IO.inspect(provider_schema, label: "provider_schema")
       provider_keys = Keyword.keys(provider_schema.schema)
+      # IO.inspect(provider_keys, label: "provider_keys")
       core_keys = all_generation_keys() |> Enum.reject(&(&1 == :provider_options))
+      # IO.inspect(core_keys, label: "core_keys")
 
       collisions = MapSet.intersection(MapSet.new(provider_keys), MapSet.new(core_keys))
+      # IO.inspect(collisions, label: "collisions")
 
       if !Enum.empty?(collisions) do
         collision_list = collisions |> Enum.sort() |> Enum.join(", ")
+        # IO.inspect(collision_list, label: "collision_list")
 
         raise ReqLLM.Error.Invalid.Parameter.exception(
                 parameter:
@@ -765,22 +768,21 @@ defmodule ReqLLM.Provider.Options do
   end
 
   defp inject_base_url_from_registry(opts, model, provider_mod) do
-    Keyword.put_new_lazy(opts, :base_url, fn ->
-      base_url_from_application_config(model.provider) ||
-        base_url_from_provider_metadata(model.provider) ||
-        provider_mod.default_base_url()
-    end)
-  end
+    case Keyword.get(opts, :base_url) do
+      nil ->
+        effective_base_url =
+          with {:ok, metadata} <- ReqLLM.Provider.Registry.get_provider_metadata(model.provider),
+               base_url when not is_nil(base_url) <-
+                 get_in(metadata, ["provider", "base_url"]) || metadata["base_url"] do
+            base_url
+          else
+            _ -> provider_mod.default_base_url()
+          end
 
-  defp base_url_from_provider_metadata(provider) do
-    case ReqLLM.Provider.Registry.get_provider_metadata(provider) do
-      {:ok, metadata} -> get_in(metadata, ["provider", "base_url"]) || metadata["base_url"]
-      {:error, :provider_not_found} -> nil
+        Keyword.put(opts, :base_url, effective_base_url)
+
+      _ ->
+        opts
     end
-  end
-
-  defp base_url_from_application_config(provider_id) do
-    config = Application.get_env(:req_llm, provider_id, [])
-    Keyword.get(config, :base_url)
   end
 end

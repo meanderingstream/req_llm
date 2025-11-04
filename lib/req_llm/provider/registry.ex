@@ -220,12 +220,16 @@ defmodule ReqLLM.Provider.Registry do
             cost =
               get_in(model_metadata, ["cost"]) |> ReqLLM.Metadata.map_string_keys_to_atoms()
 
+            model_base_url =
+              get_in(model_metadata, ["model_base_url"])
+
             enhanced_model =
               ReqLLM.Model.new(provider_id, model_name,
                 limit: limit,
                 modalities: modalities,
                 capabilities: capabilities,
-                cost: cost
+                cost: cost,
+                model_base_url: model_base_url
               )
 
             # Add raw metadata for backward compatibility and additional fields
@@ -395,7 +399,7 @@ defmodule ReqLLM.Provider.Registry do
       env_vars #=> ["ANTHROPIC_API_KEY"]
 
   """
-  @spec get_provider_metadata(atom()) :: {:ok, map()} | {:error, :provider_not_found}
+  @spec get_provider_metadata(atom()) :: {:ok, map()} | {:error, :not_found}
   def get_provider_metadata(provider_id) when is_atom(provider_id) do
     case get_provider_info(provider_id) do
       {:ok, %{metadata: metadata}} -> {:ok, metadata}
@@ -519,7 +523,7 @@ defmodule ReqLLM.Provider.Registry do
           "models" => %{"claude-3-sonnet" => %{"id" => "claude-3-sonnet", ...}}
         }
       }
-      
+
       ReqLLM.Provider.Registry.initialize(catalog)
       #=> :ok
 
