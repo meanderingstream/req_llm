@@ -258,7 +258,7 @@ defmodule ReqLLM.Provider.Options do
       final_opts
       |> Keyword.merge(internal_opts)
       |> validate_context(opts)
-      |> inject_base_url_from_registry(model, provider_mod)
+      |> inject_base_url_from_registry(model)
 
     final_opts
   end
@@ -422,7 +422,8 @@ defmodule ReqLLM.Provider.Options do
   """
   @spec effective_base_url(module(), ReqLLM.Model.t(), keyword()) :: String.t()
   def effective_base_url(provider_mod, %ReqLLM.Model{} = model, opts) do
-    opts[:base_url] ||
+    model.base_url ||
+      opts[:base_url] ||
       base_url_from_application_config(model.provider) ||
       base_url_from_provider_metadata(model.provider) ||
       provider_mod.default_base_url()
@@ -764,12 +765,10 @@ defmodule ReqLLM.Provider.Options do
     String.jaro_distance(str1, str2) > 0.7
   end
 
-  defp inject_base_url_from_registry(opts, model, provider_mod) do
-    Keyword.put_new_lazy(opts, :base_url, fn ->
-      base_url_from_application_config(model.provider) ||
-        base_url_from_provider_metadata(model.provider) ||
-        provider_mod.default_base_url()
-    end)
+  defp inject_base_url_from_registry(opts, model) do
+    Keyword.put(opts, :base_url,
+      effective_base_url(model.provider, %ReqLLM.Model{} = model, opts)
+    )
   end
 
   defp base_url_from_provider_metadata(provider) do

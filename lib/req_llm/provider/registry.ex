@@ -220,12 +220,15 @@ defmodule ReqLLM.Provider.Registry do
             cost =
               get_in(model_metadata, ["cost"]) |> ReqLLM.Metadata.map_string_keys_to_atoms()
 
+            base_url = get_in(model_metadata, ["base_url"])
+
             enhanced_model =
               ReqLLM.Model.new(provider_id, model_name,
                 limit: limit,
                 modalities: modalities,
                 capabilities: capabilities,
-                cost: cost
+                cost: cost,
+                base_url: base_url
               )
 
             # Add raw metadata for backward compatibility and additional fields
@@ -519,7 +522,7 @@ defmodule ReqLLM.Provider.Registry do
           "models" => %{"claude-3-sonnet" => %{"id" => "claude-3-sonnet", ...}}
         }
       }
-      
+
       ReqLLM.Provider.Registry.initialize(catalog)
       #=> :ok
 

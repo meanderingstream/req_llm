@@ -51,6 +51,7 @@ defmodule ReqLLM.Model do
     field(:modalities, %{input: [modality()], output: [modality()]} | nil)
     field(:capabilities, capabilities() | nil)
     field(:cost, cost() | nil)
+    field(:base_url, String.t(), enforce: false)
     field(:_metadata, map() | nil)
   end
 
@@ -72,6 +73,7 @@ defmodule ReqLLM.Model do
   - `:capabilities` - Model capabilities like `:reasoning`, `:tool_call`, `:temperature`, `:attachment`
   - `:cost` - Pricing information with `:input` and `:output` cost per 1K tokens
      Optional `:cached_input` cost per 1K tokens (defaults to `:input` rate if not specified)
+  - `:base_url - model specific base_url value.  Overrides the VLLM provider base_url value.
   - `:_metadata` - Additional provider-specific metadata
 
   ## Examples
@@ -97,6 +99,7 @@ defmodule ReqLLM.Model do
       modalities: Keyword.get(opts, :modalities),
       capabilities: Keyword.get(opts, :capabilities),
       cost: Keyword.get(opts, :cost),
+      base_url: Keyword.get(opts, :base_url),
       _metadata: Keyword.get(opts, :_metadata)
     }
   end

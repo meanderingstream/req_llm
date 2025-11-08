@@ -346,7 +346,7 @@ defmodule ReqLLM.Catalog do
 
       allowed_spec?(:anthropic, "claude-3-5-sonnet")
       # => true (if anthropic: :all in catalog)
-      
+
       allowed_spec?(:openai, "gpt-4o-mini")
       # => true (if matches pattern)
   """

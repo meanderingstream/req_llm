@@ -1,0 +1,13 @@
+{
+  "provider": {
+    "id": "vllm"
+  },
+  "exclude": [
+    "test-only-text-embedding",
+    "test-only-chat",
+    "test-only-text-embedding",
+    "test-only-responses",
+    "test-only-max-completions",
+    "test-only-chat-no-model-base-url"
+  ]
+}

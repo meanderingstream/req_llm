@@ -137,6 +137,8 @@ zai_coder_models = :all
 # Cerebras - All models
 cerebras_models = :all
 
+vllm_models = []
+
 config :req_llm, :catalog,
   allow: %{
     anthropic: anthropic_models,
@@ -149,7 +151,8 @@ config :req_llm, :catalog,
     google_vertex_anthropic: google_vertex_anthropic_models,
     zai: zai_models,
     zai_coder: zai_coder_models,
-    cerebras: cerebras_models
+    cerebras: cerebras_models,
+    vllm: vllm_models
   },
   overrides: [],
   custom: []

@@ -15,6 +15,7 @@ config :req_llm, :catalog,
     openrouter: :all,
     amazon_bedrock: :all,
     google_vertex_anthropic: :all,
+    vllm: :all,
     zai: :all,
     zai_coder: :all,
     cerebras: :all
