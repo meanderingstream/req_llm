@@ -259,6 +259,7 @@ defmodule ReqLLM.Provider.Options do
       |> Keyword.merge(internal_opts)
       |> validate_context(opts)
       |> inject_base_url_from_registry(model, provider_mod)
+
     final_opts
   end
 
@@ -767,7 +768,7 @@ defmodule ReqLLM.Provider.Options do
   defp inject_base_url_from_registry(opts, model, provider_mod) do
     Keyword.put_new_lazy(opts, :base_url, fn ->
       model.base_url ||
-      base_url_from_application_config(model.provider) ||
+        base_url_from_application_config(model.provider) ||
         base_url_from_provider_metadata(model.provider) ||
         provider_mod.default_base_url()
     end)

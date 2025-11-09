@@ -14,9 +14,9 @@ defmodule ReqLLM.Providers.VLLM do
 
   use ReqLLM.Provider.DSL,
     id: :vllm,
-    base_url: "http://localhost:8005/v1",  #Required to have a value, but not useful
+    # Required to have a value, but generally not used.
+    base_url: "http://localhost:8005/v1",
     metadata: "priv/models_dev/vllm.json",
     default_env_key: "OPENAI_API_KEY",
     provider_schema: []
-
 end

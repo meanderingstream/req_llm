@@ -119,7 +119,6 @@ defmodule ReqLLM.Providers.VLLMTest do
       assert request.options[:model] == model.model
       assert request.options[:operation] == :embedding
       assert request.options[:text] == "Hello, world!"
-      # assert request.options[:provider_options][:dimensions] == 512
 
       # Verify authentication
       assert String.starts_with?(List.first(request.headers["authorization"]), "Bearer test-key-")
@@ -275,8 +274,7 @@ defmodule ReqLLM.Providers.VLLMTest do
         options: [
           operation: :embedding,
           model: model.model,
-          text: text#,
-          # dimensions: 512
+          text: text
         ]
       }
 
@@ -285,7 +283,6 @@ defmodule ReqLLM.Providers.VLLMTest do
 
       assert decoded["model"] == "test-only-text-embedding"
       assert decoded["input"] == "Hello, world!"
-      # assert decoded["dimensions"] == 512
     end
   end
 
@@ -524,7 +521,6 @@ defmodule ReqLLM.Providers.VLLMTest do
     end
 
     test "encode_body for embedding with optional parameters" do
-
       model = ReqLLM.Model.from!("vllm:test-only-text-embedding")
 
       mock_request = %Req.Request{
@@ -571,7 +567,9 @@ defmodule ReqLLM.Providers.VLLMTest do
 
       {:error, error} = VLLM.prepare_request(:unsupported, model, context, [])
       assert %ReqLLM.Error.Invalid.Parameter{} = error
-      assert error.parameter =~ "operation: :unsupported not supported by ReqLLM.Providers.VLLM. Supported operations: [:chat, :object, :embedding]"
+
+      assert error.parameter =~
+               "operation: :unsupported not supported by ReqLLM.Providers.VLLM. Supported operations: [:chat, :object, :embedding]"
     end
 
     test "attach rejects invalid model provider" do
@@ -749,7 +747,7 @@ defmodule ReqLLM.Providers.VLLMTest do
   describe "model base_url overrides the provider base_url" do
     test "model with a base_url is used by the request base_url" do
       {:ok, provider} = ReqLLM.Provider.Registry.get_provider(:vllm)
-      {:ok, model } = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-chat")
+      {:ok, model} = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-chat")
       {:ok, provider_metadata} = ReqLLM.Provider.Registry.get_provider_metadata(:vllm)
       {:ok, request} = provider.prepare_request(:chat, model, "Hello!", temperature: 0.7)
       assert request.options.base_url == "http://localhost:8006/v1"
@@ -759,7 +757,7 @@ defmodule ReqLLM.Providers.VLLMTest do
 
     test "another model with a base_url is used by the request base_url" do
       {:ok, provider} = ReqLLM.Provider.Registry.get_provider(:vllm)
-      {:ok, model } = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-responses")
+      {:ok, model} = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-responses")
       {:ok, provider_metadata} = ReqLLM.Provider.Registry.get_provider_metadata(:vllm)
       {:ok, request} = provider.prepare_request(:chat, model, "Hello!", temperature: 0.7)
       assert request.options.base_url == "http://localhost:8001/v1"
@@ -769,7 +767,7 @@ defmodule ReqLLM.Providers.VLLMTest do
 
     test "request base_url for model with no base_url uses the provider base_url" do
       {:ok, provider} = ReqLLM.Provider.Registry.get_provider(:vllm)
-      {:ok, model } = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-chat-no-model-base-url")
+      {:ok, model} = ReqLLM.Provider.Registry.get_model(:vllm, "test-only-chat-no-model-base-url")
       {:ok, provider_metadata} = ReqLLM.Provider.Registry.get_provider_metadata(:vllm)
       {:ok, request} = provider.prepare_request(:chat, model, "Hello!", temperature: 0.7)
       assert request.options.base_url == "http://localhost:8005/v1"
