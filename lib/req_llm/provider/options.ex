@@ -499,12 +499,17 @@ defmodule ReqLLM.Provider.Options do
   """
   @spec effective_base_url(module(), LLMDB.Model.t(), keyword()) :: String.t()
   def effective_base_url(provider_mod, %LLMDB.Model{} = model, opts) do
+    from_model_opts =
+      if is_bitstring(model.base_url) do
+        model.base_url
+      end
+
     from_opts = opts[:base_url]
     from_config = base_url_from_application_config(model.provider)
     from_metadata = base_url_from_provider_metadata(model.provider)
     from_provider_default = provider_mod.default_base_url()
 
-    result = from_opts || from_config || from_metadata || from_provider_default
+    result = from_model_opts || from_opts || from_config || from_metadata || from_provider_default
 
     result
   end
